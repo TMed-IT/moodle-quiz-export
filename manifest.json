@@ -1,0 +1,46 @@
+{
+    "name": "Moodle Quiz Export",
+    "description": "Chrome extension to copy moodle quiz to clipboard in table",
+    "version": "1.0.0",
+    "manifest_version": 3,
+  
+    "icons": {
+      "128": "icon128.png"
+    },
+  
+    "permissions": [
+      "activeTab",
+      "scripting",
+      "clipboardWrite"
+    ],
+  
+    "host_permissions": [
+      "https://*/mod/quiz/review.php*"
+    ],
+  
+    "background": {
+      "service_worker": "background.js"
+    },
+  
+    "content_scripts": [
+      {
+        "matches": ["https://*/mod/quiz/review.php*"],
+        "js": ["content.js"]
+      }
+    ],
+  
+    "commands": {
+      "copy-quiz-table": {
+        "suggested_key": {
+          "default": "Alt+Shift+Q",
+          "mac": "Alt+Shift+Q"
+        },
+        "description": "Export current quiz to clipboard in table"
+      }
+    },
+  
+    "action": {
+      "default_title": "Moodle Quiz Export"
+    }
+  }
+  
