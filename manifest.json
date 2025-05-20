@@ -1,7 +1,7 @@
 {
     "name": "Moodle Quiz Export",
     "description": "Chrome extension to copy moodle quiz to clipboard in table",
-    "version": "1.0.0",
+    "version": "0.1.1",
     "manifest_version": 3,
   
     "icons": {
