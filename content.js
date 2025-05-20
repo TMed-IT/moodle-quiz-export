@@ -2,13 +2,18 @@
     function addFloatingButton() {
       if (document.getElementById('mqee-fab')) return;
   
+      const footerButton = document.evaluate('/html/body/div[2]/div[5]/footer/div[1]/button', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+      if (!footerButton) return;
+  
       const btn = document.createElement('button');
       btn.id = 'mqee-fab';
-      btn.title = 'Alt+Shift+Q to copy';
+      btn.title = 'Click to copy';
+  
+      const footerRect = footerButton.getBoundingClientRect();
       Object.assign(btn.style, {
         position: 'fixed',
-        right: '24px',
-        bottom: '80px',
+        right: `${window.innerWidth - footerRect.right - 5}px`,
+        bottom: `${window.innerHeight - footerRect.top + 24}px`,
         width: '48px',
         height: '48px',
         borderRadius: '50%',
@@ -17,7 +22,6 @@
         color: '#fff',
         fontSize: '24px',
         cursor: 'pointer',
-        zIndex: 9999,
         boxShadow: '0 2px 8px rgba(0,0,0,0.25)'
       });
       btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></svg>`;
@@ -30,6 +34,7 @@
   
     function parseQuiz() {
       const questions = Array.from(document.querySelectorAll('div.que'));
+      console.log(questions);
       if (!questions.length) {
         throw new Error('Question block not found.');
       }
@@ -37,37 +42,31 @@
       const rows = [];
       let maxOptions = 0;
   
-      const indexToLabel = i => String.fromCharCode(97 + i); // 0 -> a, 1 -> b
-  
       for (const q of questions) {
         const qtext = q.querySelector('.qtext')?.innerText.trim() ?? '';
   
-        const optionNodes = q.querySelectorAll('.d-flex.w-auto[id] .flex-fill.ml-1');
-        const options = Array.from(optionNodes, n => n.innerText.trim());
-  
+        const optionNodes = q.querySelector('.answer')?.querySelectorAll('div.r0, div.r1') ?? [];
+        const options = Array.from(optionNodes, n => n.querySelector('div > div > div > div')?.innerText.trim());
+
+        console.log(options);
+
         const ra = q.querySelector('.rightanswer')?.innerText.trim() ?? '';
         const afterColon = ra.split(':').slice(1).join(':').trim();
         const correctTexts = afterColon
           ? afterColon.split(',').map(t => t.trim())
           : [];
-  
-        const correctLabels = options.reduce((acc, opt, idx) => {
-          if (correctTexts.includes(opt)) acc.push(indexToLabel(idx));
-          return acc;
-        }, []);
-  
-        if (correctLabels.length === 0 && /correct answer is 'true'/i.test(ra)) {
-          options.length = 0;
-          options.push('はい', 'いいえ');
-          correctLabels.push('はい');
-        } else if (correctLabels.length === 0 && /correct answer is 'false'/i.test(ra)) {
-          options.length = 0;
-          options.push('いいえ', 'はい');
-          correctLabels.push('いいえ');
-        }
+
+        console.log(correctTexts);
+
+        options.sort((a, b) => a.localeCompare(b, 'ja'));
+        
+        const correctOptions = options.filter(opt => correctTexts.includes(opt));
+        const incorrectOptions = options.filter(opt => !correctTexts.includes(opt));
+        options.length = 0;
+        options.push(...correctOptions, ...incorrectOptions);
   
         maxOptions = Math.max(maxOptions, options.length);
-        rows.push([qtext, correctLabels.length, ...options]);
+        rows.push([qtext, correctOptions.length, ...options]);
       }
   
       return { rows, maxOptions };
