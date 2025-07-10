@@ -66,7 +66,7 @@
           } else {
             const ra = raDiv.innerText.trim();
             const afterColon = ra.split(':').slice(1).join(':').trim();
-            correctTexts = afterColon ? [afterColon.trim()] : [];
+            correctTexts = afterColon ? afterColon.split(', ').map(text => text.trim()) : [];
           }
         }
 
