@@ -7,7 +7,7 @@
   
       const btn = document.createElement('button');
       btn.id = 'mqee-fab';
-      btn.title = 'Click to copy';
+      btn.title = 'Left click: Copy without headers\nRight click: Copy with headers';
   
       const footerRect = footerButton.getBoundingClientRect();
       Object.assign(btn.style, {
@@ -28,11 +28,16 @@
       btn.style.display = 'flex';
       btn.style.alignItems = 'center';
       btn.style.justifyContent = 'center';
-      btn.addEventListener('click', copyQuizTable);
+      btn.addEventListener('click', () => copyQuizTable(false));
+      btn.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        copyQuizTable(true);
+      });
+      btn.addEventListener('dblclick', () => copyQuizTable(false));
       document.body.appendChild(btn);
     }
   
-    function parseQuiz() {
+    function parseQuiz(includeHeaders = true) {
       const questions = Array.from(document.querySelectorAll('div.que'));
       console.log(questions);
       if (!questions.length) {
@@ -48,40 +53,50 @@
         const optionNodes = q.querySelector('.answer')?.querySelectorAll('div.r0, div.r1') ?? [];
         const options = Array.from(optionNodes, n => n.querySelector('div > div > div > div')?.innerText.trim());
 
-        console.log(options);
+        let correctTexts = [];
+        const raDiv = q.querySelector('.rightanswer');
+        if (raDiv) {
+          const pList = raDiv.querySelectorAll('p[dir="ltr"]');
+          if (pList.length > 0) {
+            correctTexts = Array.from(pList).map((p, i) => {
+              let t = p.innerText;
+              if (i < pList.length - 1 && t.endsWith(',')) t = t.slice(0, -1);
+              return t.trim();
+            });
+          } else {
+            const ra = raDiv.innerText.trim();
+            const afterColon = ra.split(':').slice(1).join(':').trim();
+            correctTexts = afterColon ? afterColon.split(', ').map(text => text.trim()) : [];
+          }
+        }
 
-        const ra = q.querySelector('.rightanswer')?.innerText.trim() ?? '';
-        const afterColon = ra.split(':').slice(1).join(':').trim();
-        const correctTexts = afterColon
-          ? afterColon.split(',').map(t => t.trim())
-          : [];
-
-        console.log(correctTexts);
+        const feedbackDiv = q.querySelector('.generalfeedback');
+        const feedback = feedbackDiv ? feedbackDiv.innerText.trim() : '';
 
         options.sort((a, b) => a.localeCompare(b, 'ja'));
-        
         const correctOptions = options.filter(opt => correctTexts.includes(opt));
         const incorrectOptions = options.filter(opt => !correctTexts.includes(opt));
         options.length = 0;
         options.push(...correctOptions, ...incorrectOptions);
   
         maxOptions = Math.max(maxOptions, options.length);
-        rows.push([qtext, correctOptions.length, ...options]);
+        rows.push([qtext, correctOptions.length, feedback, ...options]);
       }
   
-      return { rows, maxOptions };
+      return { rows, maxOptions, includeHeaders };
     }
   
-    async function copyQuizTable() {
+    async function copyQuizTable(includeHeaders = true) {
       try {
-        const { rows, maxOptions } = parseQuiz();
+        const { rows, maxOptions } = parseQuiz(includeHeaders);
   
-        const headers = ['問題', '解答数'];
+        const headers = ['問題', '解答数', '解説'];
         for (let i = 0; i < maxOptions; ++i) headers.push(`選択肢${String.fromCharCode(97 + i)}`);
   
-        const tsv = [headers, ...rows].map(r => r.join('\t')).join('\n');
+        const dataToCopy = includeHeaders ? [headers, ...rows] : rows;
+        const tsv = dataToCopy.map(r => r.join('\t')).join('\n');
   
-        const htmlRows = [headers, ...rows].map(
+        const htmlRows = dataToCopy.map(
           r => `<tr>${r.map(c => `<td>${c ?? ''}</td>`).join('')}</tr>`
         ).join('');
         const html = `<table>${htmlRows}</table>`;
@@ -95,7 +110,7 @@
           })
         ]);
   
-        toast('Quiz copied to clipboard.');
+        toast(`Quiz copied to clipboard${includeHeaders ? ' with headers' : ''}.`);
       } catch (err) {
         console.error(err);
         toast('Copy failed: ' + err.message);
